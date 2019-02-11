@@ -1,7 +1,9 @@
 #include "xxhash.h"
 #include <stdio.h>
 #include <stdint.h>
+#ifndef _WIN32
 #include <endian.h>
+#endif
 #include <malloc.h>
 #include <inttypes.h>
 
