@@ -5,6 +5,37 @@
 #include <malloc.h>
 #include <inttypes.h>
 
+#undef bswap16
+#undef bswap32
+
+static inline int16_t toLittle16(int16_t val) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if __GNUC__
+  return __builtin_bswap16(val);
+#elif _WIN32
+  return _byteswap_ushort(val);
+#else
+  return (val = (val << 8) | ((val >> 8) & 0xFF));
+#endif
+#else
+  return val;
+#endif
+}
+
+static inline int32_t toLittle32(int32_t val) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if __GNUC__
+  return __builtin_bswap32(val);
+#elif _WIN32
+  return _byteswap_ulong(val);
+#else
+  val = (val & 0x0000FFFF) << 16 | (val & 0xFFFF0000) >> 16;
+  val = (val & 0x00FF00FF) << 8 | (val & 0xFF00FF00) >> 8;
+#endif
+#endif
+  return val;
+}
+
 typedef enum
 {
     TF_I4,
@@ -82,10 +113,10 @@ int main(int argc, char* argv[])
 
     TXTRHeader header;
     fread(&header, 1, sizeof(TXTRHeader), f);
-    header.format = (TXTRFormat)__bswap_32(header.format);
-    header.width = __bswap_16(header.width);
-    header.height = __bswap_16(header.height);
-    header.mipmapCount = __bswap_32(header.mipmapCount);
+    header.format = (TXTRFormat)toLittle32(header.format);
+    header.width = toLittle16(header.width);
+    header.height = toLittle16(header.height);
+    header.mipmapCount = toLittle32(header.mipmapCount);
     uint32_t textureSize = 0;
     DOLTXTRFormat dtFormat = retroToDol(header.format);
     if (dtFormat == DTF_INVALID)
