@@ -187,10 +187,13 @@ int main(int argc, char* argv[])
 
     uint64_t hash = XXH64(data, textureSize, 0);
 
-    if (hasPalette)
+    if (hasPalette) {
         printf("tex1_%dx%d%s_%016" PRIx64 "_%016" PRIx64 "_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, palHash, dtFormat);
-    else
+        printf("tex1_%dx%d%s_%016" PRIx64 "_$_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, dtFormat);
+        printf("tex1_%dx%d%s_%016" PRIx64 "\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash);
+    } else {
         printf("tex1_%dx%d%s_%016" PRIx64 "_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, dtFormat);
+    }
     free(data);
     fclose(f);
     return 0;
