@@ -6,7 +6,7 @@
 #endif
 #include <malloc.h>
 #include <inttypes.h>
-
+#include <stdbool.h>
 #undef bswap16
 #undef bswap32
 
@@ -53,6 +53,12 @@ typedef enum
     TF_DXT1
 } TXTRFormat;
 
+typedef enum {
+    TPF_IA8,
+    TPF_RGB565,
+    TPF_RGB5A3
+} TXTRPalFormat;
+
 typedef enum
 {
     DTF_I4 = 0,
@@ -76,6 +82,12 @@ typedef struct
     uint16_t height;
     uint32_t mipmapCount;
 } TXTRHeader;
+
+typedef __attribute__((__packed__)) struct {
+    TXTRPalFormat format;
+    uint16_t width;
+    uint16_t height;
+} TXTRPalHeader;
 
 DOLTXTRFormat retroToDol(TXTRFormat fmt)
 {
@@ -128,13 +140,22 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    bool hasPalette = false;
+    TXTRPalHeader palHeader;
     switch(header.format)
     {
     case TF_IDX8:
     case TF_IDX4:
-        fclose(f);
-        printf("Palletized textures are currently unsupported\n");
-        return 1;
+        hasPalette = true;
+        fread(&palHeader, 1, sizeof(TXTRPalHeader), f);
+        palHeader.format = (TXTRFormat)toLittle32(palHeader.format);
+        palHeader.width = toLittle16(palHeader.width);
+        palHeader.height = toLittle16(palHeader.height);
+        if (header.format == TF_IDX4)
+            textureSize = header.width * header.height / 2;
+        else if (header.format == TF_IDX8)
+            textureSize = header.width * header.height;
+        break;
     case TF_I4:
     case TF_DXT1:
         textureSize = header.width * header.height / 2;
@@ -152,12 +173,25 @@ int main(int argc, char* argv[])
         break;
     }
 
+    uint64_t palHash = 0;
+    if (hasPalette) {
+        uint32_t palSize = palHeader.width * palHeader.height * 2;
+        void* palData = malloc(palSize);
+        fread(palData, 1, palSize, f);
+        palHash = XXH64(palData, palSize, 0);
+        free(palData);
+    }
+
     void* data = malloc(textureSize);
     fread(data, 1, textureSize, f);
-    fclose(f);
 
     uint64_t hash = XXH64(data, textureSize, 0);
 
-    printf("tex1_%dx%d%s_%016" PRIx64 "_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, dtFormat);
+    if (hasPalette)
+        printf("tex1_%dx%d%s_%016" PRIx64 "_%016" PRIx64 "_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, palHash, dtFormat);
+    else
+        printf("tex1_%dx%d%s_%016" PRIx64 "_%d\n", header.width, header.height, header.mipmapCount > 1 ? "_m" : "", hash, dtFormat);
+    free(data);
+    fclose(f);
     return 0;
 }
