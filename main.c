@@ -83,7 +83,7 @@ typedef struct
     uint32_t mipmapCount;
 } TXTRHeader;
 
-typedef __attribute__((__packed__)) struct {
+typedef struct {
     TXTRPalFormat format;
     uint16_t width;
     uint16_t height;
